@@ -1,0 +1,218 @@
+@import "tailwindcss" source("../../");
+
+:root {
+  /* Reddit Dark Theme Colors */
+  --reddit-orange: #ff4500;
+  --reddit-orange-hover: #ff5414;
+  --reddit-blue: #0079d3;
+  --reddit-blue-hover: #1484d6;
+  
+  /* Background colors */
+  --bg-canvas: #030303;
+  --bg-primary: #1a1a1b;
+  --bg-secondary: #272729;
+  --bg-hover: #2d2d2e;
+  --bg-active: #3a3a3c;
+  
+  /* Border colors */
+  --border-primary: #343536;
+  --border-hover: #818384;
+  
+  /* Text colors */
+  --text-primary: #d7dadc;
+  --text-secondary: #818384;
+  --text-muted: #6f7071;
+  --text-link: #4fbcff;
+  
+  /* Upvote/Downvote */
+  --upvote: #ff4500;
+  --downvote: #7193ff;
+  
+  /* Status colors */
+  --success: #46d160;
+  --error: #ff585b;
+  --warning: #ffd635;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.5;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+  }
+}
+
+@layer utilities {
+  .skeleton {
+    background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-hover) 50%, var(--bg-secondary) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Reddit-style buttons */
+  .btn-primary {
+    background-color: var(--reddit-orange);
+    color: white;
+    font-weight: 700;
+    border-radius: 9999px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--reddit-orange-hover);
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--text-primary);
+    font-weight: 700;
+    border: 1px solid var(--text-primary);
+    border-radius: 9999px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--bg-hover);
+  }
+
+  .btn-blue {
+    background-color: var(--reddit-blue);
+    color: white;
+    font-weight: 700;
+    border-radius: 9999px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-blue:hover {
+    background-color: var(--reddit-blue-hover);
+  }
+
+  /* Card styling */
+  .reddit-card {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+  }
+
+  .reddit-card:hover {
+    border-color: var(--border-hover);
+  }
+
+  /* Input styling */
+  .reddit-input {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-primary);
+    border-radius: 4px;
+    transition: border-color 0.15s ease;
+  }
+
+  .reddit-input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+  }
+
+  .reddit-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* Search bar */
+  .search-bar {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 9999px;
+    transition: all 0.15s ease;
+  }
+
+  .search-bar:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--border-hover);
+  }
+
+  .search-bar:focus-within {
+    background-color: var(--bg-canvas);
+    border-color: var(--text-primary);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.2s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--reddit-orange);
+  color: white;
+}
