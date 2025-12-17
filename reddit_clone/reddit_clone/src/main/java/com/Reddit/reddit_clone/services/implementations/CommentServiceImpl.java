@@ -66,4 +66,28 @@ public class CommentServiceImpl implements CommentService {
             return null;
         }
     }
+
+    @Override
+    public void upVote(Integer commentId) {
+        Optional<Comment>comment=commentRepo.findById(commentId);
+        if(comment.isPresent()){
+            comment.get().setVotes(comment.get().getVotes()+1);
+            commentRepo.save(comment.get());
+        }
+        else {
+            System.out.println("لا و الف لا ");
+        }
+    }
+
+    @Override
+    public void downVote(Integer commentId) {
+        Optional<Comment>comment=commentRepo.findById(commentId);
+        if(comment.isPresent()){
+            comment.get().setVotes(comment.get().getVotes()-1);
+            commentRepo.save(comment.get());
+        }
+        else {
+            System.out.println("لا و الف لا ");
+        }
+    }
 }

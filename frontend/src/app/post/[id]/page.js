@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getPost, getPostComments, addComment, getCurrentUser, getImageDataUrl } from "../../../lib/api";
+import { getPost, getPostComments, addComment, getCurrentUser, getImageDataUrl, upvoteComment, downvoteComment } from "../../../lib/api";
 import { ArrowBigUp, ArrowBigDown, MessageSquare, Share2, Bookmark, Award, MoreHorizontal, Send, Flag, EyeOff } from "lucide-react";
 
 export default function PostDetailPage() {
@@ -17,6 +17,7 @@ export default function PostDetailPage() {
   const [votes, setVotes] = useState(0);
   const [voteState, setVoteState] = useState(null);
   const [user, setUser] = useState(null);
+  const [commentVotes, setCommentVotes] = useState({}); // { commentId: { votes: number, voteState: 'up' | 'down' | null } }
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -28,10 +29,46 @@ export default function PostDetailPage() {
           getPostComments(postId),
         ]);
         setPost(postData);
-        setComments(commentsData || []);
+        const commentsList = commentsData || [];
+        setComments(commentsList);
+        
+        // Initialize vote states for each comment
+        const initialVotes = {};
+        commentsList.forEach(comment => {
+          initialVotes[comment.commentId] = {
+            votes: comment.votes || 0,
+            voteState: null
+          };
+        });
+        setCommentVotes(initialVotes);
       } catch (err) {
-        const stored = sessionStorage.getItem(`post_${postId}`);
-        if (stored) setPost(JSON.parse(stored));
+        console.error("Error fetching post data:", err);
+        // Try to get post from sessionStorage as fallback
+        try {
+          const stored = sessionStorage.getItem(`post_${postId}`);
+          if (stored) {
+            const storedPost = JSON.parse(stored);
+            setPost(storedPost);
+          }
+          // Still try to fetch comments even if post fetch failed
+          try {
+            const commentsData = await getPostComments(postId);
+            const commentsList = commentsData || [];
+            setComments(commentsList);
+            const initialVotes = {};
+            commentsList.forEach(comment => {
+              initialVotes[comment.commentId] = {
+                votes: comment.votes || 0,
+                voteState: null
+              };
+            });
+            setCommentVotes(initialVotes);
+          } catch (commentErr) {
+            console.error("Error fetching comments:", commentErr);
+          }
+        } catch (storageErr) {
+          console.error("Error reading from sessionStorage:", storageErr);
+        }
       } finally {
         setLoading(false);
       }
@@ -47,6 +84,16 @@ export default function PostDetailPage() {
     try {
       const result = await addComment({ content: newComment.trim(), postId: parseInt(postId) }, user.userId);
       setComments([...comments, result]);
+      
+      // Initialize vote state for new comment
+      setCommentVotes(prev => ({
+        ...prev,
+        [result.commentId]: {
+          votes: result.votes || 0,
+          voteState: null
+        }
+      }));
+      
       setNewComment("");
     } catch (err) {
       console.error("Failed to add comment");
@@ -70,8 +117,88 @@ export default function PostDetailPage() {
       setVotes(votes + 1);
       setVoteState(null);
     } else {
-      setVotes(voteState === 'up' ? votes - 2 : votes - 1);
+      setVotes(voteState === 'up' ? votes + 2 : votes + 1);
       setVoteState('down');
+    }
+  };
+
+  const handleCommentUpvote = async (commentId) => {
+    if (!user) return;
+    
+    const currentVote = commentVotes[commentId] || { votes: 0, voteState: null };
+    
+    // Optimistic update
+    const optimisticVotes = currentVote.votes + 1;
+    setCommentVotes(prev => ({
+      ...prev,
+      [commentId]: {
+        votes: optimisticVotes,
+        voteState: 'up'
+      }
+    }));
+    
+    try {
+      await upvoteComment(commentId);
+      
+      // Refresh comments to get updated vote count from backend
+      const updatedComments = await getPostComments(postId);
+      const updatedComment = updatedComments.find(c => c.commentId === commentId);
+      if (updatedComment) {
+        setCommentVotes(prev => ({
+          ...prev,
+          [commentId]: {
+            votes: updatedComment.votes || 0,
+            voteState: 'up'
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to upvote comment:", error);
+      // Revert optimistic update
+      setCommentVotes(prev => ({
+        ...prev,
+        [commentId]: currentVote
+      }));
+    }
+  };
+
+  const handleCommentDownvote = async (commentId) => {
+    if (!user) return;
+    
+    const currentVote = commentVotes[commentId] || { votes: 0, voteState: null };
+    
+    // Optimistic update
+    const optimisticVotes = currentVote.votes - 1;
+    setCommentVotes(prev => ({
+      ...prev,
+      [commentId]: {
+        votes: optimisticVotes,
+        voteState: 'down'
+      }
+    }));
+    
+    try {
+      await downvoteComment(commentId);
+      
+      // Refresh comments to get updated vote count from backend
+      const updatedComments = await getPostComments(postId);
+      const updatedComment = updatedComments.find(c => c.commentId === commentId);
+      if (updatedComment) {
+        setCommentVotes(prev => ({
+          ...prev,
+          [commentId]: {
+            votes: updatedComment.votes || 0,
+            voteState: 'down'
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to downvote comment:", error);
+      // Revert optimistic update
+      setCommentVotes(prev => ({
+        ...prev,
+        [commentId]: currentVote
+      }));
     }
   };
 
@@ -172,19 +299,34 @@ export default function PostDetailPage() {
                 {/* Title */}
                 <h1 className="text-xl font-medium text-[var(--text-primary)] mb-3">{post.title}</h1>
 
-                {/* Post Image - only show if image exists and is not a tiny placeholder (1x1 transparent PNG is ~67 bytes) */}
-                {post.image && post.imageType && Array.isArray(post.image) && post.image.length > 100 && (
-                  <div className="mb-4 rounded-lg overflow-hidden">
-                    <img
-                      src={getImageDataUrl(post.image, post.imageType)}
-                      alt={post.title}
-                      className="w-full max-h-[600px] object-contain bg-[var(--bg-secondary)]"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
+                {/* Post Image - prefer imageUrl from transformed post */}
+                {(() => {
+                  let imageUrl = post.imageUrl;
+                  
+                  // Fallback: convert from image bytes if imageUrl not available
+                  if (!imageUrl && post.image && post.imageType) {
+                    // Only show if it's not a tiny placeholder
+                    const isPlaceholder = Array.isArray(post.image) && post.image.length <= 100;
+                    if (isPlaceholder) return null;
+                    
+                    imageUrl = getImageDataUrl(post.image, post.imageType);
+                  }
+                  
+                  if (!imageUrl) return null;
+                  
+                  return (
+                    <div className="mb-4 rounded-lg overflow-hidden">
+                      <img
+                        src={imageUrl}
+                        alt={post.title}
+                        className="w-full max-h-[600px] object-contain bg-[var(--bg-secondary)]"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* Content */}
                 {post.content && (
@@ -308,12 +450,34 @@ export default function PostDetailPage() {
                     {/* Comment Actions */}
                     <div className="flex items-center gap-1 mt-2 -ml-1.5">
                       <div className="flex items-center">
-                        <button className="p-1 text-[var(--text-muted)] hover:text-[var(--upvote)] hover:bg-[var(--upvote)]/10 rounded transition-colors">
-                          <ArrowBigUp className="w-4 h-4" />
+                        <button 
+                          onClick={() => handleCommentUpvote(comment.commentId)}
+                          className={`p-1 rounded transition-colors ${
+                            commentVotes[comment.commentId]?.voteState === 'up'
+                              ? 'text-[var(--upvote)] bg-[var(--upvote)]/10' 
+                              : 'text-[var(--text-muted)] hover:text-[var(--upvote)] hover:bg-[var(--upvote)]/10'
+                          }`}
+                        >
+                          <ArrowBigUp className={`w-4 h-4 ${commentVotes[comment.commentId]?.voteState === 'up' ? 'fill-current' : ''}`} />
                         </button>
-                        <span className="text-xs font-bold text-[var(--text-muted)] min-w-[16px] text-center">0</span>
-                        <button className="p-1 text-[var(--text-muted)] hover:text-[var(--downvote)] hover:bg-[var(--downvote)]/10 rounded transition-colors">
-                          <ArrowBigDown className="w-4 h-4" />
+                        <span className={`text-xs font-bold min-w-[16px] text-center ${
+                          commentVotes[comment.commentId]?.voteState === 'up' 
+                            ? 'text-[var(--upvote)]' 
+                            : commentVotes[comment.commentId]?.voteState === 'down'
+                            ? 'text-[var(--downvote)]'
+                            : 'text-[var(--text-muted)]'
+                        }`}>
+                          {commentVotes[comment.commentId]?.votes ?? comment.votes ?? 0}
+                        </span>
+                        <button 
+                          onClick={() => handleCommentDownvote(comment.commentId)}
+                          className={`p-1 rounded transition-colors ${
+                            commentVotes[comment.commentId]?.voteState === 'down'
+                              ? 'text-[var(--downvote)] bg-[var(--downvote)]/10' 
+                              : 'text-[var(--text-muted)] hover:text-[var(--downvote)] hover:bg-[var(--downvote)]/10'
+                          }`}
+                        >
+                          <ArrowBigDown className={`w-4 h-4 ${commentVotes[comment.commentId]?.voteState === 'down' ? 'fill-current' : ''}`} />
                         </button>
                       </div>
                       <button className="px-2 py-1 text-xs font-bold text-[var(--text-muted)] hover:bg-[var(--bg-hover)] rounded transition-colors">

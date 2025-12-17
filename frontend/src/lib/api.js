@@ -232,29 +232,49 @@ export const updateProfile = async (userData, imageFile) => {
   return res.json();
 };
 
+// Helper to transform post data (convert image bytes to imageUrl and remove large byte arrays)
+const transformPostData = (post) => {
+  if (!post) return post;
+  const transformedPost = { ...post };
+  
+  // Convert image bytes to imageUrl if available
+  if (transformedPost.image && transformedPost.imageType) {
+    transformedPost.imageUrl = getImageDataUrl(transformedPost.image, transformedPost.imageType);
+    // Remove the large byte array to reduce memory usage and improve performance
+    delete transformedPost.image;
+  }
+  
+  return transformedPost;
+};
+
 // Post APIs
 export const getAllPosts = async () => {
   const res = await fetch(`${API_BASE}/get-all-posts`);
   if (!res.ok) throw new Error("Failed to fetch posts");
-  return res.json();
+  const posts = await res.json();
+  // Transform each post to convert image bytes to imageUrl
+  return Array.isArray(posts) ? posts.map(transformPostData) : [];
 };
 
 export const getPost = async (postId) => {
   const res = await fetch(`${API_BASE}/get-post?postId=${postId}`);
   if (!res.ok) throw new Error("Failed to fetch post");
-  return res.json();
+  const post = await res.json();
+  return transformPostData(post);
 };
 
 export const getCommunityPosts = async (communityName) => {
   const res = await fetch(`${API_BASE}/get-community-posts?communityName=${encodeURIComponent(communityName)}`);
   if (!res.ok) throw new Error("Failed to fetch community posts");
-  return res.json();
+  const posts = await res.json();
+  return Array.isArray(posts) ? posts.map(transformPostData) : [];
 };
 
 export const getUserPosts = async (email) => {
   const res = await fetch(`${API_BASE}/get-user-posts?email=${encodeURIComponent(email)}`);
   if (!res.ok) throw new Error("Failed to fetch user posts");
-  return res.json();
+  const posts = await res.json();
+  return Array.isArray(posts) ? posts.map(transformPostData) : [];
 };
 
 export const createPost = async (postData, imageFile) => {
@@ -329,4 +349,18 @@ export const addComment = async (commentData, userId) => {
   });
   if (!res.ok) throw new Error("Failed to add comment");
   return res.json();
+};
+
+export const upvoteComment = async (commentId) => {
+  const res = await fetch(`${API_BASE}/up-vote?commentId=${commentId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to upvote comment");
+};
+
+export const downvoteComment = async (commentId) => {
+  const res = await fetch(`${API_BASE}/down-vote?commentId=${commentId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to downvote comment");
 };

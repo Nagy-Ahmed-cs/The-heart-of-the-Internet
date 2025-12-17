@@ -29,7 +29,18 @@ export default function PostCard({ post }) {
 
   const handleClick = () => {
     if (post.postId) {
-      sessionStorage.setItem(`post_${post.postId}`, JSON.stringify(post));
+      // Remove large image byte array before storing to avoid quota errors
+      const postToStore = { ...post };
+      if (postToStore.image) {
+        delete postToStore.image;
+      }
+      // Keep imageUrl if it exists, but don't store raw bytes
+      try {
+        sessionStorage.setItem(`post_${post.postId}`, JSON.stringify(postToStore));
+      } catch (e) {
+        console.warn('Failed to store post in sessionStorage:', e);
+        // Continue anyway - we can fetch from API if needed
+      }
       router.push(`/post/${post.postId}`);
     }
   };
@@ -162,14 +173,17 @@ export default function PostCard({ post }) {
 
           {/* Post Image - display if image exists and is not a tiny placeholder */}
           {(() => {
-            // Check if post has image data and it's not a placeholder
-            if (!post.image || !post.imageType) return null;
+            // Prefer imageUrl from transformed post, otherwise convert from image bytes
+            let imageUrl = post.imageUrl;
             
-            // Check if image has meaningful content (not a 1x1 transparent placeholder)
-            const isPlaceholder = Array.isArray(post.image) && post.image.length <= 100;
-            if (isPlaceholder) return null;
+            if (!imageUrl && post.image && post.imageType) {
+              // Check if image has meaningful content (not a 1x1 transparent placeholder)
+              const isPlaceholder = Array.isArray(post.image) && post.image.length <= 100;
+              if (isPlaceholder) return null;
+              
+              imageUrl = getImageDataUrl(post.image, post.imageType);
+            }
             
-            const imageUrl = getImageDataUrl(post.image, post.imageType);
             if (!imageUrl) return null;
             
             return (

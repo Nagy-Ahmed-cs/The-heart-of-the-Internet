@@ -11,5 +11,7 @@ public interface CommentService {
     CommentResDto addComment(CommentReqDto dto, Integer userId);
     CommentResDto updateComment(CommentReqDto dto);
     List<CommentResDto>getPostComments(Integer postId);
+    void upVote(Integer commentId);
+    void downVote(Integer commentId);
 
 }

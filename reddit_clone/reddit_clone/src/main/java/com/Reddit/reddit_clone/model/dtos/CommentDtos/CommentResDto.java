@@ -17,5 +17,6 @@ public class CommentResDto {
     private String username;
     private LocalDateTime createAt;
     private boolean isEdited;
+    private int votes;
 
 }

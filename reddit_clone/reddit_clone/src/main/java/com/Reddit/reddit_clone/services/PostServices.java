@@ -16,6 +16,5 @@ public interface PostServices {
     List<PostResDto>getPostForCommunity(String communityName);
     List<PostResDto>getPostForUser(String email);
     String deletePost(Integer postId);
-
     List<PostResDto>getPosts();
 }
