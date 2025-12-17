@@ -160,6 +160,32 @@ export default function PostCard({ post }) {
             {post.title}
           </h3>
 
+          {/* Post Image - display if image exists and is not a tiny placeholder */}
+          {(() => {
+            // Check if post has image data and it's not a placeholder
+            if (!post.image || !post.imageType) return null;
+            
+            // Check if image has meaningful content (not a 1x1 transparent placeholder)
+            const isPlaceholder = Array.isArray(post.image) && post.image.length <= 100;
+            if (isPlaceholder) return null;
+            
+            const imageUrl = getImageDataUrl(post.image, post.imageType);
+            if (!imageUrl) return null;
+            
+            return (
+              <div className="mb-2 rounded-lg overflow-hidden">
+                <img
+                  src={imageUrl}
+                  alt={post.title}
+                  className="w-full max-h-96 object-contain bg-[var(--bg-secondary)] rounded"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+            );
+          })()}
+
           {/* Content Preview */}
           {post.content && (
             <div className="relative">

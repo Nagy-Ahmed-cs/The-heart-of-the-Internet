@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getPost, getPostComments, addComment, getCurrentUser } from "../../../lib/api";
+import { getPost, getPostComments, addComment, getCurrentUser, getImageDataUrl } from "../../../lib/api";
 import { ArrowBigUp, ArrowBigDown, MessageSquare, Share2, Bookmark, Award, MoreHorizontal, Send, Flag, EyeOff } from "lucide-react";
 
 export default function PostDetailPage() {
@@ -171,6 +171,20 @@ export default function PostDetailPage() {
 
                 {/* Title */}
                 <h1 className="text-xl font-medium text-[var(--text-primary)] mb-3">{post.title}</h1>
+
+                {/* Post Image - only show if image exists and is not a tiny placeholder (1x1 transparent PNG is ~67 bytes) */}
+                {post.image && post.imageType && Array.isArray(post.image) && post.image.length > 100 && (
+                  <div className="mb-4 rounded-lg overflow-hidden">
+                    <img
+                      src={getImageDataUrl(post.image, post.imageType)}
+                      alt={post.title}
+                      className="w-full max-h-[600px] object-contain bg-[var(--bg-secondary)]"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Content */}
                 {post.content && (

@@ -62,20 +62,36 @@ export const getImageDataUrl = (imageBytes, imageType) => {
 export const getCurrentUser = () => {
   if (typeof window === "undefined") return null;
   const user = localStorage.getItem("user");
-  if (!user) return null;
+  if (!user) {
+    console.log('getCurrentUser - No user in localStorage');
+    return null;
+  }
   try {
     const parsedUser = JSON.parse(user);
     // imageUrl should already be stored, but if we have image bytes as fallback, convert them
     if (!parsedUser.imageUrl && parsedUser.image && parsedUser.imageType) {
+      console.log('getCurrentUser - Converting image bytes to URL');
       parsedUser.imageUrl = getImageDataUrl(parsedUser.image, parsedUser.imageType);
+      
+      // Update localStorage with the converted imageUrl
+      if (parsedUser.imageUrl) {
+        delete parsedUser.image; // Remove raw bytes
+        try {
+          localStorage.setItem("user", JSON.stringify(parsedUser));
+        } catch (e) {
+          console.warn('getCurrentUser - Failed to update localStorage:', e);
+        }
+      }
     }
+    
     // Ensure we don't return the large image byte array
     if (parsedUser.image) {
       delete parsedUser.image;
     }
+    
     return parsedUser;
   } catch (error) {
-    console.error('Error parsing user:', error);
+    console.error('getCurrentUser - Error parsing user:', error);
     return null;
   }
 };
@@ -91,18 +107,35 @@ export const storeUserData = (userData) => {
   // Convert image bytes to base64 data URL if available, otherwise use existing imageUrl
   let imageUrl = null;
   
+  console.log('storeUserData - Input userData:', {
+    hasImage: !!userData.image,
+    hasImageType: !!userData.imageType,
+    hasImageUrl: !!userData.imageUrl,
+    imageSize: userData.image ? (Array.isArray(userData.image) ? userData.image.length : 'not array') : 0,
+    imageType: userData.imageType
+  });
   
+  // ALWAYS try to convert image bytes if they exist, even if imageUrl already exists
   if (userData.image && userData.imageType) {
     try {
+      console.log('storeUserData - Converting image bytes to URL, array length:', Array.isArray(userData.image) ? userData.image.length : 'not an array');
       imageUrl = getImageDataUrl(userData.image, userData.imageType);
+      if (imageUrl) {
+        console.log('storeUserData - Image URL created successfully, length:', imageUrl.length);
+      } else {
+        console.warn('storeUserData - getImageDataUrl returned null');
+      }
     } catch (error) {
       console.error('Error converting image to URL:', error);
       // If conversion fails, use existing imageUrl if available
       imageUrl = userData.imageUrl || null;
     }
-  } else if (userData.imageUrl) {
-    // If no raw image bytes but we have an imageUrl, use it
+  } 
+  
+  // If conversion didn't work but we have an existing imageUrl, use it
+  if (!imageUrl && userData.imageUrl) {
     imageUrl = userData.imageUrl;
+    console.log('storeUserData - Using existing imageUrl');
   }
   
   // Store only essential fields (EXPLICITLY excluding the large image byte array)
@@ -125,9 +158,25 @@ export const storeUserData = (userData) => {
     delete userToStore.image;
   }
   
+  // Log what we're storing
+  console.log('storeUserData - Storing user:', {
+    userName: userToStore.userName,
+    email: userToStore.email,
+    hasImageUrl: !!userToStore.imageUrl,
+    imageUrlLength: userToStore.imageUrl ? userToStore.imageUrl.length : 0
+  });
+  
   // Store user data in localStorage (WITHOUT the large image byte array)
   try {
     localStorage.setItem("user", JSON.stringify(userToStore));
+    console.log('storeUserData - Successfully stored user in localStorage');
+    
+    // Verify it was stored correctly
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      console.log('storeUserData - Verification - stored imageUrl:', !!parsed.imageUrl);
+    }
   } catch (error) {
     // If still getting quota error, try removing imageUrl too (user will have no profile pic but can still use the app)
     if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
@@ -208,13 +257,21 @@ export const getUserPosts = async (email) => {
   return res.json();
 };
 
-export const createPost = async (postData) => {
+export const createPost = async (postData, imageFile) => {
+  // Backend always requires an image file, so we always send as multipart/form-data
+  const formData = new FormData();
+  formData.append("dto", new Blob([JSON.stringify(postData)], { type: "application/json" }));
+  formData.append("image", imageFile);
+  
   const res = await fetch(`${API_BASE}/create-post`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(postData),
+    body: formData,
   });
-  if (!res.ok) throw new Error("Failed to create post");
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to create post: ${errorText}`);
+  }
   return res.json();
 };
 

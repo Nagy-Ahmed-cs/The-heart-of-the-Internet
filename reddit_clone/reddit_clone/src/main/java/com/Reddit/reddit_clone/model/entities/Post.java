@@ -23,6 +23,11 @@ public class Post {
     private String title;
     @CreationTimestamp
     private LocalDateTime createAt;
+    private String imageName;
+    private String imageType;
+    @Lob
+    private byte [] image;
+
     @ManyToOne
     @JoinColumn(name="user_id")
     private User user;

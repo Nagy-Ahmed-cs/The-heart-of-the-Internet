@@ -27,12 +27,28 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      router.push("/login");
-      return;
-    }
-    setUser(currentUser);
+    const loadUser = () => {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        router.push("/login");
+        return;
+      }
+      console.log('Settings - User loaded:', {
+        userName: currentUser.userName,
+        hasImageUrl: !!currentUser.imageUrl,
+        imageUrlPreview: currentUser.imageUrl ? currentUser.imageUrl.substring(0, 50) + '...' : 'none'
+      });
+      setUser(currentUser);
+    };
+    
+    loadUser();
+    
+    // Listen for user updates
+    window.addEventListener('userLogin', loadUser);
+    
+    return () => {
+      window.removeEventListener('userLogin', loadUser);
+    };
   }, [router]);
   
   // Prevent rendering if user is not loaded
@@ -84,9 +100,13 @@ export default function SettingsPage() {
                         alt={user.userName || "User"} 
                         className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border-primary)]"
                         onError={(e) => {
+                          console.error('Settings - Image failed to load');
                           e.target.style.display = 'none';
                           const fallback = e.target.nextElementSibling;
                           if (fallback) fallback.style.display = 'flex';
+                        }}
+                        onLoad={() => {
+                          console.log('Settings - Profile image loaded successfully');
                         }}
                       />
                     ) : null}
@@ -210,27 +230,6 @@ export default function SettingsPage() {
               </div>
               
               <div className="p-4 space-y-2">
-                <button
-                  onClick={toggleDarkMode}
-                  className="flex items-center justify-between w-full px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    {darkMode ? (
-                      <Moon className="w-5 h-5 text-[var(--text-secondary)]" />
-                    ) : (
-                      <Sun className="w-5 h-5 text-[var(--text-secondary)]" />
-                    )}
-                    <div>
-                      <p className="font-medium">{darkMode ? "Dark Mode" : "Light Mode"}</p>
-                      <p className="text-xs text-[var(--text-muted)]">Toggle theme</p>
-                    </div>
-                  </div>
-                  <div className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-colors ${
-                    darkMode ? 'bg-[var(--reddit-blue)] justify-end' : 'bg-[var(--text-muted)] justify-start'
-                  }`}>
-                    <div className="w-5 h-5 bg-white rounded-full" />
-                  </div>
-                </button>
                 <Link
                   href="/about-reddit"
                   className="flex items-center gap-3 w-full px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded transition-colors"

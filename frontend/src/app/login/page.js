@@ -43,15 +43,32 @@ export default function LoginPage() {
 
     try {
       const userData = await loginUser(email.trim(), password.trim());
+      console.log('Login - Received userData:', {
+        userName: userData.userName,
+        hasImage: !!userData.image,
+        hasImageType: !!userData.imageType,
+        hasImageUrl: !!userData.imageUrl
+      });
       
       // Store user data (excluding large image byte array)
-      storeUserData(userData);
+      const storedUser = storeUserData(userData);
+      console.log('Login - Stored user:', {
+        userName: storedUser.userName,
+        hasImageUrl: !!storedUser.imageUrl
+      });
       
-      // Dispatch custom event to update navbar
+      // Verify storage
+      const verifyUser = getCurrentUser();
+      console.log('Login - Verification:', {
+        userName: verifyUser?.userName,
+        hasImageUrl: !!verifyUser?.imageUrl
+      });
+      
+      // Dispatch custom event to update navbar (multiple times to ensure it's caught)
       window.dispatchEvent(new Event('userLogin'));
       
       // Small delay to ensure localStorage is updated before redirect
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Redirect to main page automatically after login
       router.push("/");

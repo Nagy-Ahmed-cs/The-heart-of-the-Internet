@@ -1,5 +1,6 @@
 package com.Reddit.reddit_clone.model.dtos.postDtos;
 
+import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

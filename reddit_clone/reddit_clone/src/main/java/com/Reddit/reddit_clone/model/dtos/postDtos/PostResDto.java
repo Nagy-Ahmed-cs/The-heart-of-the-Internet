@@ -1,5 +1,6 @@
 package com.Reddit.reddit_clone.model.dtos.postDtos;
 
+import jakarta.persistence.Lob;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,5 +24,10 @@ public class PostResDto {
     private String communityName;
 
     private LocalDateTime createAt;
+    private String imageName;
+    private String imageType;
+    @Lob
+    private byte [] image;
+
 
 }

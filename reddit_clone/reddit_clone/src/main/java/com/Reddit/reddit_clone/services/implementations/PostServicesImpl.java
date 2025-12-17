@@ -12,7 +12,9 @@ import com.Reddit.reddit_clone.repos.UserRepo;
 import com.Reddit.reddit_clone.services.PostServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 @Service
@@ -26,7 +28,7 @@ public class PostServicesImpl implements PostServices {
     @Autowired
     private PostMapper postMapper;
     @Override
-    public PostResDto createPost(PostReqDto dto) {
+    public PostResDto createPost(PostReqDto dto, MultipartFile image) throws IOException {
         Post post=postMapper.toEntity(dto);
         Optional<Community> community = communityRepo.findByCommunityName(dto.getCommunityName());
         Optional<User>user=userRepo.findById(dto.getUserId());
@@ -35,12 +37,15 @@ public class PostServicesImpl implements PostServices {
             community.get().getPosts().add(post);
             post.setUser(user.get());
             post.setCommunity(community.get());
+            post.setImageName(image.getOriginalFilename());
+            post.setImageType(image.getContentType());
+            post.setImage(image.getBytes());
             userRepo.save(user.get());
             communityRepo.save(community.get());
 
             return postMapper.toResponse(postRepo.save(post));
         }
-        System.out.println("there may be some thing wrong ");
+        System.out.println("there may be something wrong ");
         return null;
     }
 

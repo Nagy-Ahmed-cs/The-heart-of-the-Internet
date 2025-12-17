@@ -32,29 +32,63 @@ export default function Navbar() {
   useEffect(() => {
     const updateUser = () => {
       const currentUser = getCurrentUser();
-      setUser(currentUser);
+      if (currentUser) {
+        console.log('Navbar - User loaded:', {
+          userName: currentUser.userName,
+          email: currentUser.email,
+          hasImageUrl: !!currentUser.imageUrl,
+          imageUrlType: typeof currentUser.imageUrl,
+          imageUrlPreview: currentUser.imageUrl ? currentUser.imageUrl.substring(0, 50) + '...' : 'none'
+        });
+        
+        // Force state update even if user object seems the same
+        setUser({ ...currentUser });
+      } else {
+        setUser(null);
+      }
       // Reset image errors when user changes
       setImageError(false);
       setDropdownImageError(false);
     };
     
     // Initial load
-    updateUser();
-    
-    // Listen for storage changes (when user logs in/out in another tab)
-    window.addEventListener('storage', updateUser);
-    
-    // Listen for custom login event (when user logs in on same tab)
-    window.addEventListener('userLogin', updateUser);
-    
-    // Also check on focus (when user logs in on same tab)
-    window.addEventListener('focus', updateUser);
-    
-    return () => {
-      window.removeEventListener('storage', updateUser);
-      window.removeEventListener('userLogin', updateUser);
-      window.removeEventListener('focus', updateUser);
-    };
+    if (typeof window !== "undefined") {
+      updateUser();
+      
+      // Listen for storage changes (when user logs in/out in another tab)
+      window.addEventListener('storage', updateUser);
+      
+      // Listen for custom login event (when user logs in on same tab)
+      window.addEventListener('userLogin', () => {
+        console.log('Navbar - userLogin event received, updating user...');
+        // Multiple attempts with delays to ensure localStorage is fully updated
+        setTimeout(updateUser, 50);
+        setTimeout(updateUser, 200);
+        setTimeout(updateUser, 500);
+      });
+      
+      // Also check on focus (when user logs in on same tab)
+      window.addEventListener('focus', updateUser);
+      
+      // Periodic check to catch any missed updates (every 2 seconds for first 10 seconds)
+      let checkCount = 0;
+      const maxChecks = 5; // Check for 10 seconds (5 * 2 seconds)
+      const intervalId = setInterval(() => {
+        checkCount++;
+        updateUser(); // Always update to ensure imageUrl is picked up
+        if (checkCount >= maxChecks) {
+          clearInterval(intervalId);
+        }
+      }, 2000);
+      
+      return () => {
+        window.removeEventListener('storage', updateUser);
+        window.removeEventListener('userLogin', updateUser);
+        window.removeEventListener('focus', updateUser);
+        clearInterval(intervalId);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -174,11 +208,17 @@ export default function Navbar() {
                     <img 
                       src={user.imageUrl} 
                       alt={user.userName || "User"} 
-                      className="w-7 h-7 rounded-full object-cover border border-[var(--border-primary)]"
-                      onError={() => setImageError(true)}
+                      className="w-7 h-7 rounded-full object-cover border border-[var(--border-primary)] shrink-0"
+                      onError={(e) => {
+                        console.error('Navbar - Image failed to load:', user.imageUrl?.substring(0, 50));
+                        setImageError(true);
+                      }}
+                      onLoad={() => {
+                        console.log('Navbar - User image loaded successfully');
+                      }}
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF4500] to-[#FF8717] flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF4500] to-[#FF8717] flex items-center justify-center shrink-0">
                       <span className="text-white text-xs font-bold">
                         {user.userName?.[0]?.toUpperCase() || "U"}
                       </span>

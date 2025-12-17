@@ -99,24 +99,49 @@ function SubmitForm() {
 
     setLoading(true);
     try {
-      // For image posts, convert image to base64 and include in content
-      // For link posts, include the URL in content
+      // Determine post content based on tab
       let postContent = content.trim();
-      if (activeTab === "image" && imagePreview) {
-        postContent = `[IMAGE:${imagePreview}]`;
-      } else if (activeTab === "link" && linkUrl.trim()) {
+      if (activeTab === "link" && linkUrl.trim()) {
         postContent = linkUrl.trim();
       }
 
-      await createPost({
+      // Create post with image if available
+      const postData = {
         title: title.trim(),
         content: postContent,
         userId: user.userId,
         communityName: selectedCommunity,
-      });
+      };
+
+      // Pass image file if image tab is selected and image exists
+      // For other post types, create a transparent 1x1 pixel PNG as placeholder
+      // since backend requires an image
+      if (activeTab === "image" && image) {
+        await createPost(postData, image);
+      } else {
+        // Create a transparent 1x1 pixel PNG for non-image posts
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 1, 1);
+        
+        canvas.toBlob(async (blob) => {
+          try {
+            await createPost(postData, blob);
+            router.push(`/community/${encodeURIComponent(selectedCommunity)}`);
+          } catch (err) {
+            setError(err.message || "Failed to create post");
+          } finally {
+            setLoading(false);
+          }
+        }, 'image/png');
+        return; // Return early since we're handling async in the callback
+      }
+      
       router.push(`/community/${encodeURIComponent(selectedCommunity)}`);
     } catch (err) {
-      setError("Failed to create post");
+      setError(err.message || "Failed to create post");
     } finally {
       setLoading(false);
     }

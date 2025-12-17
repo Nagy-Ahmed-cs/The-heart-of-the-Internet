@@ -7,7 +7,9 @@ import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -15,8 +17,8 @@ public class PostController {
     @Autowired
     private PostServices postServices;
     @PostMapping("/create-post")
-    public ResponseEntity<PostResDto> createPost(@RequestBody PostReqDto dto){
-        return ResponseEntity.ok(postServices.createPost(dto));
+    public ResponseEntity<PostResDto> createPost(@RequestPart PostReqDto dto, @RequestPart MultipartFile image) throws IOException {
+        return ResponseEntity.ok(postServices.createPost(dto, image));
     }
     @GetMapping("/get-community-posts")
     public ResponseEntity<List<PostResDto>>getCommunityPosts(@RequestParam String communityName){
