@@ -364,3 +364,22 @@ export const downvoteComment = async (commentId) => {
   });
   if (!res.ok) throw new Error("Failed to downvote comment");
 };
+
+// AI Summarization APIs
+export const summarizePost = async (postId) => {
+  const res = await fetch(`${API_BASE}/summarize?postId=${postId}`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to summarize post");
+  const data = await res.json();
+  return data.summary || data.error || "Unable to generate summary";
+};
+
+export const summarizeAllPosts = async () => {
+  const res = await fetch(`${API_BASE}/summarize-all-posts`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to summarize all posts");
+  const data = await res.json();
+  return data;
+};

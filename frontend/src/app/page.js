@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import PostCard from "../components/postCard";
 import Sidebar from "../components/Sidebar";
-import { getAllPosts, getCurrentUser } from "../lib/api";
+import { getAllPosts, getCurrentUser, summarizeAllPosts } from "../lib/api";
 import { Flame, Clock, TrendingUp, ImageIcon, Link2, Sparkles } from "lucide-react";
 
 export default function HomePage() {
@@ -13,6 +13,9 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("hot");
   const [imageError, setImageError] = useState(false);
   const [user, setUser] = useState(null);
+  const [allPostsSummary, setAllPostsSummary] = useState(null);
+  const [loadingAllSummary, setLoadingAllSummary] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -43,6 +46,25 @@ export default function HomePage() {
       {label}
     </button>
   );
+
+  const handleSummarizeAllPosts = async () => {
+    if (posts.length === 0) {
+      alert("No posts available to summarize.");
+      return;
+    }
+    setLoadingAllSummary(true);
+    setShowSummaryModal(true);
+    try {
+      const result = await summarizeAllPosts();
+      setAllPostsSummary(result);
+    } catch (err) {
+      console.error("Failed to summarize all posts:", err);
+      alert("Failed to generate summary. Please try again.");
+      setShowSummaryModal(false);
+    } finally {
+      setLoadingAllSummary(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-[var(--bg-canvas)]">
@@ -223,6 +245,14 @@ export default function HomePage() {
                   >
                     Create Community
                   </Link>
+                  <button
+                    onClick={handleSummarizeAllPosts}
+                    disabled={loadingAllSummary || posts.length === 0}
+                    className="w-full flex h-8 items-center justify-center gap-2 text-xs font-bold text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {loadingAllSummary ? "Summarizing..." : "Summarize All Posts"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -244,6 +274,59 @@ export default function HomePage() {
           </div>
         </div>
       </aside>
+
+      {/* Summary Modal */}
+      {showSummaryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSummaryModal(false)}>
+          <div className="bg-[var(--bg-primary)] rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--border-primary)] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-500" />
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">All Posts Summary</h2>
+              </div>
+              <button
+                onClick={() => setShowSummaryModal(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              {loadingAllSummary ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+                  <p className="text-[var(--text-muted)]">Generating summary of all posts...</p>
+                </div>
+              ) : allPostsSummary ? (
+                <div className="space-y-4">
+                  {allPostsSummary.totalPosts && (
+                    <div className="text-sm text-[var(--text-muted)]">
+                      Summarized {allPostsSummary.totalPosts} post{allPostsSummary.totalPosts !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  <div className="p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
+                    <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
+                      {allPostsSummary.summary || allPostsSummary.error || "No summary available"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[var(--text-muted)]">
+                  No summary available
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-[var(--border-primary)] flex justify-end">
+              <button
+                onClick={() => setShowSummaryModal(false)}
+                className="px-4 py-2 bg-[var(--text-primary)] hover:bg-[var(--text-secondary)] text-[var(--bg-primary)] text-sm font-bold rounded-full transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getPost, getPostComments, addComment, getCurrentUser, getImageDataUrl, upvoteComment, downvoteComment } from "../../../lib/api";
-import { ArrowBigUp, ArrowBigDown, MessageSquare, Share2, Bookmark, Award, MoreHorizontal, Send, Flag, EyeOff } from "lucide-react";
+import { getPost, getPostComments, addComment, getCurrentUser, getImageDataUrl, upvoteComment, downvoteComment, summarizePost } from "../../../lib/api";
+import { ArrowBigUp, ArrowBigDown, MessageSquare, Share2, Bookmark, Award, MoreHorizontal, Send, Flag, EyeOff, Sparkles } from "lucide-react";
 
 export default function PostDetailPage() {
   const params = useParams();
@@ -18,6 +18,8 @@ export default function PostDetailPage() {
   const [voteState, setVoteState] = useState(null);
   const [user, setUser] = useState(null);
   const [commentVotes, setCommentVotes] = useState({}); // { commentId: { votes: number, voteState: 'up' | 'down' | null } }
+  const [summary, setSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -213,6 +215,23 @@ export default function PostDetailPage() {
     return `${Math.floor(diff / 86400)} days ago`;
   };
 
+  const handleSummarize = async () => {
+    if (!post || !post.content) {
+      alert("This post has no content to summarize.");
+      return;
+    }
+    setLoadingSummary(true);
+    try {
+      const summaryText = await summarizePost(parseInt(postId));
+      setSummary(summaryText);
+    } catch (err) {
+      console.error("Failed to summarize post:", err);
+      alert("Failed to generate summary. Please try again.");
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-6">
@@ -332,6 +351,31 @@ export default function PostDetailPage() {
                 {post.content && (
                   <div className="text-[var(--text-secondary)] whitespace-pre-wrap mb-4 leading-relaxed">
                     {post.content}
+                  </div>
+                )}
+
+                {/* AI Summary Section */}
+                {summary && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-purple-500" />
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">AI Summary</h3>
+                    </div>
+                    <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{summary}</p>
+                  </div>
+                )}
+
+                {/* Summarize Button */}
+                {post.content && !summary && (
+                  <div className="mb-4">
+                    <button
+                      onClick={handleSummarize}
+                      disabled={loadingSummary}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white text-sm font-bold rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {loadingSummary ? "Generating Summary..." : "Summarize Post"}
+                    </button>
                   </div>
                 )}
 
