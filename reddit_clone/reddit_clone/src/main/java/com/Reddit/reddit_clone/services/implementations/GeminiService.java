@@ -10,8 +10,8 @@ public class GeminiService {
 
 
 
-    private final String API_KEY = "AIzaSyBjk87uae8LACuVxjt9bLUFC_GYrFrb1XU";
-    private final String ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBjk87uae8LACuVxjt9bLUFC_GYrFrb1XU";
+    private final String API_KEY = "AIzaSyC1EMwIF5byPN4igHypqGxOvuVmhHBbowY";
+    private final String ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY;
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String askGemini(String postContent) {
@@ -45,14 +45,34 @@ public class GeminiService {
             // Extract first candidate response
             Map responseBody = response.getBody();
             if (responseBody != null) {
+                // Check for error in response
+                if (responseBody.containsKey("error")) {
+                    Map error = (Map) responseBody.get("error");
+                    String errorMsg = error.get("message") != null ? error.get("message").toString() : "Unknown error";
+                    return "Gemini API Error: " + errorMsg;
+                }
+                
                 List<Map> candidates = (List<Map>) responseBody.get("candidates");
                 if (candidates != null && !candidates.isEmpty()) {
                     Map contentMap = (Map) candidates.get(0).get("content");
-                    List<Map> parts = (List<Map>) contentMap.get("parts");
-                    return (String) parts.get(0).get("text");
+                    if (contentMap != null) {
+                        List<Map> parts = (List<Map>) contentMap.get("parts");
+                        if (parts != null && !parts.isEmpty()) {
+                            return (String) parts.get(0).get("text");
+                        }
+                    }
                 }
             }
             return "No valid response from Gemini.";
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // Handle I/O errors (network, SSL, connection issues)
+            return "Network error connecting to Gemini API. Please check your internet connection and try again. Details: " + e.getMessage();
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // Handle HTTP client errors (4xx)
+            return "Gemini API Client Error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString();
+        } catch (org.springframework.web.client.HttpServerErrorException e) {
+            // Handle HTTP server errors (5xx)
+            return "Gemini API Server Error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString();
         } catch (Exception e) {
             return "Error calling Gemini API: " + e.getMessage();
         }
