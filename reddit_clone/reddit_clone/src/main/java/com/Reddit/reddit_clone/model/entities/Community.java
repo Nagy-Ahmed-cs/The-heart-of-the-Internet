@@ -20,7 +20,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-@Builder
+
 @Where(clause = "delete_at is null")
 public class Community {
     @Id

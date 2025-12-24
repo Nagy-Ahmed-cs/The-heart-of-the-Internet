@@ -10,7 +10,7 @@ public class GeminiService {
 
 
 
-    private final String API_KEY = "AIzaSyC1EMwIF5byPN4igHypqGxOvuVmhHBbowY";
+    private final String API_KEY = "AIzaSyCXhXx5j5qsGxHPYwxaO8Tqd1F_eD1oWxc";
     private final String ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + API_KEY;
     private final RestTemplate restTemplate = new RestTemplate();
 
